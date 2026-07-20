@@ -6,58 +6,71 @@
 
 ## Claim
 
-Este projeto prova que: baseline AWS como codigo.
+Provar uma baseline pequena de infraestrutura como codigo que valida sem credenciais AWS, separa modulos de rede, servico e observabilidade e deixa o provider real atras de um adapter opt-in.
 
 ## Stack
 
-terraform, aws, tflint, checkov
+- Terraform 1.9.8
+- Python stdlib
+- Docker
+- GitHub Actions
 
 ## User-visible output
 
-- Docker command: pending
-- README opens with: # #27 terraform-aws-baseline
-- Benchmark table: provision_time_seconds
+- Docker default: `docker run --rm terraform-aws-baseline`
+- Benchmark command: `python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json`
+- Primary metric: `provision_time_seconds`
 
 ## Scope
 
 In:
 
-- Implementar o menor produto funcional que prove o claim.
-- Rodar por Docker.
-- Gerar benchmark JSON reproduzivel.
+- Root Terraform local com terraform_data e fixture versionada.
+- Modulos network, service e observability com variaveis e outputs.
+- Adapter AWS separado com provider AWS e ECS/VPC/CloudWatch.
+- Testes de contrato, Docker, CI e benchmark JSON.
+- Documentacao de troca local para AWS e limites de emulacao.
 
 Out:
 
-- Publicar repo antes do primeiro resultado numerico.
-- Depender de segredo pago para o caminho default.
+- Apply AWS no caminho default.
+- Credenciais, state remoto, IAM, ALB, NAT Gateway ou custo de conta real.
+- Claim de paridade completa com AWS ou Kumo.
 
 ## Architecture
 
-`	xt
-client -> app -> domain -> adapters -> benchmark output
-`
+~~~text
+root -> adapters/local -> modules/network, modules/service, modules/observability
+root local has no external provider
+adapters/aws -> real AWS provider and resources, opt-in only
+~~~
 
 ## Benchmark
 
 Primary metric:
 
 - name: provision_time_seconds
-- target: first reproducible baseline
-- command: pending
-- result file: enchmarks/results/*.json
+- meaning: median time of terraform plan with refresh disabled on the local fixture
+- command: python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
+- result file: benchmarks/results/27-local-first.json
 
-## Dataset or fixture
+Secondary metric:
 
-- source: pending
-- size: pending
-- license: pending
-- deterministic seed: 42
+- validation_median_seconds: median terraform validate time after local init
+
+## Fixture
+
+- source: fixtures/local-baseline.auto.tfvars.json
+- version: 1.0.0
+- size: one baseline with two logical zones, one service and one log contract
+- license: project-local
+- deterministic seed: no random seed; identifiers are hashes of Terraform inputs
 
 ## Definition of done
 
-- [ ] Docker command works from clean clone.
-- [ ] README starts with project number and benchmark result.
-- [ ] Benchmark command writes JSON result.
-- [ ] Tests cover core behavior.
-- [ ] REFERENCES.md explains reuse.
-- [ ] No secret or paid credential required for default demo.
+- [x] Docker command works from clean checkout.
+- [x] README starts with project number and reports the benchmark artifact.
+- [x] Benchmark command writes JSON result.
+- [x] Tests cover module and adapter contracts.
+- [x] REFERENCES.md explains reuse and attribution.
+- [x] No secret or paid credential is required for the default demo.

@@ -3,6 +3,8 @@ __pycache__/
 .ruff_cache/
 .venv/
 benchmarks/results/*.json
+!benchmarks/results/27-local-first.json
 dist/
 target/
 build/
+.terraform/

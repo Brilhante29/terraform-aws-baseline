@@ -2,20 +2,21 @@
 
 ## Identity
 
-- **Program:** <program>
-- **Status:** scaffold
-- **Proves:** baseline AWS como codigo
+- **Program:** delivery-observability-infra
+- **Status:** benchmarked
+- **Proves:** local-first Terraform baseline with an explicit AWS adapter
 - **Primary benchmark:** `provision_time_seconds`
 
 ## Evidence Map
 
 | Evidence | Location | State |
 |---|---|---|
-| Specification | `sdd/spec.md` | required |
-| Architecture decision | `sdd/architecture-decision.md` | required |
-| Benchmark plan | `sdd/benchmark-plan.md` | required |
-| Benchmark result | `benchmarks/results/` | pending |
-| OpenSpec verification | `openspec/artifacts/verification.md` | required |
-| Reuse review | `sdd/reuse-improvement-review.md` | required |
+| Specification | `sdd/spec.md` | complete |
+| Architecture decision | `sdd/architecture-decision.md` | complete |
+| Benchmark plan | `sdd/benchmark-plan.md` | complete |
+| Benchmark result | `benchmarks/results/27-local-first.json` | complete |
+| OpenSpec verification | `openspec/artifacts/verification.md` | complete |
+| Reuse review | `sdd/reuse-improvement-review.md` | complete |
+| Docker and CI | `Dockerfile`, `.github/workflows/ci.yml` | complete |
 
-This file is the project-level inventory. Update it whenever a new proof artifact, reusable component, or architectural decision appears.
+This inventory preserves the project-level control contract and points to the implemented proof artifacts.

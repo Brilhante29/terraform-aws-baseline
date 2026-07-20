@@ -1,24 +1,26 @@
 id: 27
 name: terraform-aws-baseline
 program:
-  id: <ai-evaluation-retrieval|applied-computer-vision|backend-reliability-platform|mlops-data-platform|delivery-observability-infra>
-  narrative_fit: <how this repo strengthens the program story>
+  id: delivery-observability-infra
+  narrative_fit: Demonstra infraestrutura reproduzivel, validacao CI e evidencia de provisionamento simulado para a historia de entrega e operacao.
   shared_assets:
-    - <program-level reusable asset>
-status: scaffold
-claim: baseline AWS como codigo
-stack: []
+    - Terraform module contract
+    - benchmark result schema
+    - local-first validation workflow
+status: published
+claim: Baseline de infraestrutura como codigo com Terraform e adapters cloud substituiveis.
+stack: [terraform, python, docker, github-actions]
 language_profile:
-  primary: <python|java|go|typescript|angular|nextjs|terraform|spring-kotlin-backend|fastapi-backend|go-backend|node-typescript-backend>
-  secondary: []
-  reason: <why this profile governs the repo>
+  primary: terraform
+  secondary: [python]
+  reason: Terraform e a linguagem de infraestrutura; Python stdlib so executa contratos e mede o benchmark.
 decision_brain:
   agentic_spec:
     source: .portfolio/decision-brain/agentic-spec-governance.yaml
     spec_store: portfolio-reuse-kit
     schema: portfolio-system
     project_config: openspec/config.yaml
-    component_pack: <default-portfolio-project|ai-evaluation-retrieval|applied-computer-vision|backend-reliability-platform|mlops-data-platform|delivery-observability-infra>
+    component_pack: default-portfolio-project
     artifact_graph:
       - intent->portfolio-impact->architecture-record
       - architecture-record+portfolio-impact->component-pack
@@ -27,86 +29,78 @@ decision_brain:
     mode: principal-agent-orchestrated
     source: .portfolio/decision-brain/agent-graph.yaml
     handoff: sdd/agent-handoff.md
-    local_first_runtime: docker+kumo-when-cloud-behavior-is-needed
+    local_first_runtime: docker plus terraform builtin mock; Kumo is reference-only
   reuse_improvement_loop:
     source: .portfolio/decision-brain/reuse-improvement-loop.yaml
     review_path: sdd/reuse-improvement-review.md
-    current_status: pending
+    current_status: complete
   principles:
-    coupling_rule: <domain/use cases do not depend on framework, database, broker, cloud SDK, transport, or UI>
+    coupling_rule: Modulos locais e contrato nao dependem de AWS SDK; o provider AWS vive apenas no adapter opt-in.
     solid: [srp, ocp, lsp, isp, dip]
-    simplicity_rule: <KISS/YAGNI rule for this repo>
-    testability_rule: <how use cases run without transport/infrastructure>
+    simplicity_rule: Usar terraform_data e tres modulos para provar composicao sem inventar servicos locais.
+    testability_rule: Testes de contrato rodam com Python stdlib; Terraform root valida sem credenciais.
     rejected_overengineering:
-      - <pattern/tool/abstraction rejected>
-  stack_profile: <spring-kotlin-backend|fastapi-backend|go-backend|node-typescript-backend|angular|nextjs|python-ml|terraform>
-  api_style: <rest-http|graphql|grpc|websocket|sse|cli>
-  messaging: <none|outbox-only|rabbitmq|kafka|redis-streams|nats>
+      - Kumo no default, porque nao ha operacao AWS a emular nesta prova.
+      - Backend remoto, IAM e NAT, porque nao sao necessarios para o benchmark.
+  stack_profile: terraform
+  api_style: cli
+  messaging: none
   cloud:
-    mode: <none|kumo-local-first|adapter-fake|real-cloud-required>
-    local_provider: kumo
-    real_provider_target: <aws|none|other>
+    mode: adapter-fake
+    local_provider: terraform_data
+    real_provider_target: aws
     emulated_services: []
-    adapter_rule: <ports/adapters keep cloud SDK outside domain/use cases>
-    config_switch: CLOUD_PROVIDER=kumo|aws
-    unsupported_behaviors: []
-  database: <postgresql|sqlite|redis|qdrant|duckdb|none|other>
-  runtime: <runtime decision>
-  library_policy: <why selected libs fit the problem and benchmark>
+    adapter_rule: O root local registra intencao em terraform_data; recursos AWS ficam isolados em adapters/aws.
+    config_switch: Escolha o diretorio adapters/local ou adapters/aws; o root default permanece local.
+    unsupported_behaviors:
+      - O local adapter nao cria recursos de rede, ECS ou CloudWatch.
+      - O benchmark nao mede apply, custo, IAM ou paridade AWS.
+  database: none
+  runtime: Terraform 1.9.8 para IaC e Python 3.12 para contratos e benchmark.
+  library_policy: Usar apenas Terraform builtin e Python stdlib no caminho default; AWS provider fica opt-in no adapter real.
   record_path: sdd/technical-decision.md
   rejected_options:
-    - option: <alternative stack/broker/api/cloud/library>
-      reason: <why it was not chosen>
+    - option: Kumo como dependencia obrigatoria
+      reason: A prova nao precisa de uma API AWS compativel e nao deve inventar endpoints.
+    - option: LocalStack ou provider AWS no root
+      reason: Adicionaria download e comportamento externo ao caminho sem credenciais.
 architecture:
-  style: <mvc|layered|modular-monolith|clean-architecture|hexagonal|cqrs-event-sourcing|event-driven|mvvm|pipeline|serverless|microservices>
-  reason: <why this problem and benchmark fit this architecture>
+  style: hexagonal
+  reason: A composicao Terraform funciona como porta de contrato, com adapter local fake deterministico e adapter AWS substituivel.
   problem_forces:
-    domain_complexity: <low|medium|high>
-    integration_pressure: <low|medium|high>
-    ui_state_complexity: <none|low|medium|high>
-    data_or_ml_reproducibility: <low|medium|high>
-    auditability: <low|medium|high>
-    throughput_or_async: <low|medium|high>
-    independent_deployability: <low|medium|high>
-  dependency_rule: <dependency direction rule>
+    domain_complexity: low
+    integration_pressure: medium
+    ui_state_complexity: none
+    data_or_ml_reproducibility: low
+    auditability: medium
+    throughput_or_async: low
+    independent_deployability: medium
+  dependency_rule: O root depende dos outputs dos modulos; provider AWS nao entra no caminho local.
   boundaries:
-    - <module/layer/context boundary>
+    - modules/network possui contrato de rede
+    - modules/service possui contrato de workload
+    - modules/observability possui contrato de logs
+    - adapters/local implementa o mock Terraform
+    - adapters/aws implementa recursos AWS opt-in
   rejected_alternatives:
-    - style: <alternative>
-      reason: <why it was not chosen>
+    - style: serverless
+      reason: Nao ha funcao ou evento para justificar esse estilo.
+    - style: microservices
+      reason: A infraestrutura e um baseline pequeno, nao um sistema distribuido.
 design_system:
-  tokens: design-system/tokens.yaml
-  readme_components:
-    - readme_header
-    - benchmark_card
-    - architecture_card
-    - references_table
+  tokens: .portfolio/design-system/tokens.yaml
+  readme_components: [readme_header, benchmark_table, module_graph, limitations_section]
   diagram_required: true
 reuse:
   kit_version: local
-  uses:
-    - catalog
-    - programs
-    - proficiency-map
-    - component-packs
-    - openspec-schema
-    - decision-brain
-    - agent-graph
-    - reuse-improvement-loop
-    - architecture
-    - language-profiles
-    - design-system
-    - sdd
-    - harness
-    - templates
-    - skills
+  uses: [catalog, programs, proficiency-map, component-packs, openspec-schema, decision-brain, agent-graph, reuse-improvement-loop, architecture, language-profiles, design-system, sdd, harness, templates, skills]
 benchmark:
   primary_metric: provision_time_seconds
-  unit: unit
-  command: pending
-  result_path: benchmarks/results/*.json
+  unit: seconds
+  command: python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
+  result_path: benchmarks/results/27-local-first.json
 release:
-  docker: pending
+  docker: Dockerfile with validate and benchmark entrypoint
   no_secret_default_path: true
   readme_has_number: true
   references_documented: true

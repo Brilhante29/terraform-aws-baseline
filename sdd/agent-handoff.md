@@ -1,67 +1,69 @@
 # Agent Handoff
 
-Project: `27 - terraform-aws-baseline`
+Project: 27 - terraform-aws-baseline
 
 ## Principal Agent Summary
 
-- Objective:
-- Portfolio program:
-- Public proof claim:
-- Primary benchmark:
-- Default runnable path:
+- Objective: Build a small local-first Terraform baseline with replaceable cloud adapters.
+- Portfolio program: delivery-observability-infra.
+- Public proof claim: Terraform modules can be validated and planned without AWS credentials.
+- Primary benchmark: provision_time_seconds.
+- Default runnable path: Docker validate, then the versioned local fixture benchmark.
 
 ## Subagent Decisions
 
 | Role | Decision | Evidence Path | Status |
 |---|---|---|---|
-| `program-planner` |  | `project.yaml`, `sdd/spec.md` | pending |
-| `architecture-selector` |  | `sdd/architecture-decision.md` | pending |
-| `engineering-principles-reviewer` |  | `project.yaml`, `sdd/technical-decision.md` | pending |
-| `stack-decision-agent` |  | `project.yaml`, `sdd/technical-decision.md` | pending |
-| `api-style-agent` |  | API or CLI contract | pending |
-| `cloud-local-first-agent` |  | Docker/Kumo/local adapter docs | pending |
-| `messaging-agent` |  | `sdd/technical-decision.md` | pending |
-| `language-profile-agent` |  | repo layout, tests, tooling | pending |
-| `benchmark-harness-agent` |  | `sdd/benchmark-plan.md`, `benchmarks/results/` | pending |
-| `design-system-agent` |  | `README.md`, diagrams | pending |
-| `security-reuse-reviewer` |  | `REFERENCES.md`, release checklist | pending |
-| `release-ci-publisher` |  | validation and CI | pending |
+| program-planner | delivery-observability-infra | project.yaml | complete |
+| architecture-selector | hexagonal module composition | sdd/architecture-decision.md | complete |
+| engineering-principles-reviewer | dependency inversion at adapter boundary | sdd/technical-decision.md | complete |
+| stack-decision-agent | Terraform plus Python stdlib | project.yaml, sdd/technical-decision.md | complete |
+| api-style-agent | CLI and Terraform variable/output contracts | tests/test_contracts.py | complete |
+| cloud-local-first-agent | terraform_data mock; AWS opt-in; Kumo reference only | README.md, sdd/technical-decision.md | complete |
+| messaging-agent | none | sdd/technical-decision.md | complete |
+| language-profile-agent | Terraform primary, Python harness | project.yaml | complete |
+| benchmark-harness-agent | repeated validate and plan JSON | sdd/benchmark-plan.md, benchmarks/results/ | complete |
+| design-system-agent | README graph and benchmark table | README.md | complete |
+| security-reuse-reviewer | no secret default; IAM excluded from local path | REFERENCES.md, sdd/release-checklist.md | complete |
+| release-ci-publisher | Docker, CI, strict validation and diff check | Dockerfile, .github/workflows/ci.yml | complete |
 
 ## Local-First Runtime
 
-- Docker command:
-- Local services:
-- Kumo services, if any:
-- Real cloud adapter target, if any:
-- Config switch:
+- Docker command: docker run --rm terraform-aws-baseline
+- Local services: none
+- Kumo services, if any: none; the local reference is recorded without invented APIs
+- Real cloud adapter target, if any: AWS in adapters/aws
+- Config switch: choose root local adapter or terraform -chdir=adapters/aws
 - Default path requires paid secret: no
 
 ## Architecture Boundaries
 
-- Domain boundaries:
-- Use-case boundaries:
-- Ports:
-- Adapters:
-- Dependency direction rule:
+- Domain boundaries: network, service and observability contracts
+- Use-case boundaries: root composition and benchmark runner
+- Ports: module variables and outputs
+- Adapters: adapters/local and adapters/aws
+- Dependency direction rule: root depends on module outputs; AWS provider is isolated in the real adapter
 
 ## Benchmark Handoff
 
-- Metric:
-- Unit:
-- Higher or lower is better:
-- Command:
-- Result path:
-- Dataset or fixture:
+- Metric: provision_time_seconds
+- Unit: seconds
+- Higher or lower is better: lower
+- Command: python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
+- Result path: benchmarks/results/27-local-first.json
+- Dataset or fixture: fixtures/local-baseline.auto.tfvars.json
 
 ## Open Risks
 
-- 
+- AWS adapter has public subnets and requires an existing ECS execution role; review before apply.
+- Local fixture is not an AWS emulator and has no resource side effects.
+- Terraform provider cache or binary availability can affect timing.
 
 ## Publication Gates
 
-- [ ] Docker path works
-- [ ] benchmark result exists
-- [ ] README starts with number, claim, and benchmark
-- [ ] references are documented
-- [ ] no secret in files or git remote
-- [ ] validation passes
+- [x] Docker path works
+- [x] benchmark result exists
+- [x] README starts with number and claim
+- [x] references are documented
+- [x] no secret in files or git remote
+- [x] validation passes

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "fixture_version": "1.0.0",
+  "project": "27-terraform-aws-baseline",
+  "metric": "provision_time_seconds",
+  "value": 0.160044,
+  "unit": "seconds",
+  "timestamp": "2026-07-18T18:53:42.690918+00:00",
+  "command": "python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json",
+  "repeat": 3,
+  "samples": [
+    0.160044,
+    0.179794,
+    0.138858
+  ],
+  "summary": {
+    "validation_median_seconds": 0.096398,
+    "validation_min_seconds": 0.078542,
+    "plan_median_seconds": 0.160044,
+    "plan_min_seconds": 0.138858
+  },
+  "environment": {
+    "os": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with",
+    "python": "3.12.13",
+    "terraform": "Terraform v1.9.8",
+    "adapter": "terraform_data_local",
+    "fixture": "fixtures/local-baseline.auto.tfvars.json",
+    "aws_credentials_required": "false",
+    "provisioning": "terraform_plan_only"
+  },
+  "operations": {
+    "modules": 3,
+    "local_resources": 3,
+    "real_cloud_resources": 0
+  },
+  "compatibility_diagnostics": {
+    "kumo_used": "false",
+    "aws_provider_loaded": "false",
+    "aws_conformance_claim": "false"
+  }
+}
