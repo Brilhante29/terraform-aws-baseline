@@ -7,7 +7,7 @@ program:
     - Terraform module contract
     - benchmark result schema
     - local-first validation workflow
-status: published
+status: benchmarked
 claim: Baseline de infraestrutura como codigo com Terraform e adapters cloud substituiveis.
 stack: [terraform, python, docker, github-actions]
 language_profile:
