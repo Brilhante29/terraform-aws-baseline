@@ -1,0 +1,5 @@
+.git
+**/.terraform.tfstate*
+**/.terraform.lock.info
+__pycache__
+*.pyc

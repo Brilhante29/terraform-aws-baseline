@@ -2,18 +2,18 @@ id: 27
 name: terraform-aws-baseline
 program:
   id: delivery-observability-infra
-  narrative_fit: Demonstra infraestrutura reproduzivel, validacao CI e evidencia de provisionamento simulado para a historia de entrega e operacao.
+  narrative_fit: Proves repeatable local infrastructure delivery, provider substitution, and source-locked provisioning evidence.
   shared_assets:
-    - Terraform module contract
-    - benchmark result schema
-    - local-first validation workflow
+    - cloud adapter contract
+    - Terraform module boundary
+    - infrastructure benchmark harness
 status: benchmarked
-claim: Baseline de infraestrutura como codigo com Terraform e adapters cloud substituiveis.
-stack: [terraform, python, docker, github-actions]
+claim: One shared Terraform module provisions locally through Kumo and can target AWS by changing only the provider adapter.
+stack: [terraform-1.15, aws-provider-5, kumo, python-3.12, docker, github-actions]
 language_profile:
   primary: terraform
   secondary: [python]
-  reason: Terraform e a linguagem de infraestrutura; Python stdlib so executa contratos e mede o benchmark.
+  reason: Terraform owns infrastructure intent; Python orchestrates reproducible lifecycle evidence and contract validation.
 decision_brain:
   agentic_spec:
     source: .portfolio/decision-brain/agentic-spec-governance.yaml
@@ -29,78 +29,81 @@ decision_brain:
     mode: principal-agent-orchestrated
     source: .portfolio/decision-brain/agent-graph.yaml
     handoff: sdd/agent-handoff.md
-    local_first_runtime: docker plus terraform builtin mock; Kumo is reference-only
+    local_first_runtime: Docker contains pinned Terraform and Kumo binaries; no cloud account is required.
   reuse_improvement_loop:
     source: .portfolio/decision-brain/reuse-improvement-loop.yaml
     review_path: sdd/reuse-improvement-review.md
-    current_status: complete
+    current_status: candidate-recorded
   principles:
-    coupling_rule: Modulos locais e contrato nao dependem de AWS SDK; o provider AWS vive apenas no adapter opt-in.
+    coupling_rule: Provider configuration belongs to adapters; all resource declarations belong to one shared module.
     solid: [srp, ocp, lsp, isp, dip]
-    simplicity_rule: Usar terraform_data e tres modulos para provar composicao sem inventar servicos locais.
-    testability_rule: Testes de contrato rodam com Python stdlib; Terraform root valida sem credenciais.
+    simplicity_rule: Four resources prove storage, events, state, and logs without introducing a landing-zone platform.
+    testability_rule: CI applies and destroys the local adapter, validates the AWS adapter statically, and locks evidence to source and image digests.
     rejected_overengineering:
-      - Kumo no default, porque nao ha operacao AWS a emular nesta prova.
-      - Backend remoto, IAM e NAT, porque nao sao necessarios para o benchmark.
+      - Remote state because its backend and access policy are environment-specific.
+      - IAM bootstrap and organization controls because they are outside the application-baseline claim.
+      - Duplicated local resources because provider substitution is the behavior under proof.
   stack_profile: terraform
   api_style: cli
-  messaging: none
+  messaging: sns
   cloud:
-    mode: adapter-fake
-    local_provider: terraform_data
+    mode: adapter-emulator
+    local_provider: kumo-0.28.1
     real_provider_target: aws
-    emulated_services: []
-    adapter_rule: O root local registra intencao em terraform_data; recursos AWS ficam isolados em adapters/aws.
-    config_switch: Escolha o diretorio adapters/local ou adapters/aws; o root default permanece local.
+    emulated_services: [s3, sns, dynamodb, cloudwatch-logs]
+    adapter_rule: Both adapters use modules/application-baseline; only provider endpoint and credential behavior differ.
+    config_switch: Select adapters/kumo for local execution or adapters/aws for real cloud.
     unsupported_behaviors:
-      - O local adapter nao cria recursos de rede, ECS ou CloudWatch.
-      - O benchmark nao mede apply, custo, IAM ou paridade AWS.
-  database: none
-  runtime: Terraform 1.9.8 para IaC e Python 3.12 para contratos e benchmark.
-  library_policy: Usar apenas Terraform builtin e Python stdlib no caminho default; AWS provider fica opt-in no adapter real.
+      - Kumo results do not establish full AWS conformance.
+      - The local benchmark does not measure AWS latency, billing, quotas, IAM, or eventual consistency.
+      - S3 bucket tagging is excluded from the shared resource due to a documented Kumo 0.28.1 compatibility gap.
+  database: dynamodb
+  runtime: Terraform 1.15.8, AWS provider 5.100.0, Kumo 0.28.1, and Python 3.12.
+  library_policy: Pin runtime image, emulator digest, provider lockfiles, and Python validation dependency.
   record_path: sdd/technical-decision.md
   rejected_options:
-    - option: Kumo como dependencia obrigatoria
-      reason: A prova nao precisa de uma API AWS compativel e nao deve inventar endpoints.
-    - option: LocalStack ou provider AWS no root
-      reason: Adicionaria download e comportamento externo ao caminho sem credenciais.
+    - option: terraform_data fake
+      reason: It proves configuration shape but not provider-level provisioning or adapter substitution.
+    - option: LocalStack
+      reason: Kumo is the portfolio-standard lightweight local-first emulator and supports the required APIs.
+    - option: Separate local and AWS resource modules
+      reason: Duplication would invalidate the substitution claim and create drift.
 architecture:
   style: hexagonal
-  reason: A composicao Terraform funciona como porta de contrato, com adapter local fake deterministico e adapter AWS substituivel.
+  reason: Provider configurations are outbound adapters around one shared infrastructure contract.
   problem_forces:
     domain_complexity: low
-    integration_pressure: medium
+    integration_pressure: high
     ui_state_complexity: none
     data_or_ml_reproducibility: low
-    auditability: medium
+    auditability: high
     throughput_or_async: low
     independent_deployability: medium
-  dependency_rule: O root depende dos outputs dos modulos; provider AWS nao entra no caminho local.
+  dependency_rule: Adapters depend inward on the shared module; the shared module never references Kumo endpoints or credentials.
   boundaries:
-    - modules/network possui contrato de rede
-    - modules/service possui contrato de workload
-    - modules/observability possui contrato de logs
-    - adapters/local implementa o mock Terraform
-    - adapters/aws implementa recursos AWS opt-in
+    - modules/application-baseline owns cloud resource intent
+    - adapters/kumo owns local endpoint and fake credential configuration
+    - adapters/aws owns real provider configuration
+    - benchmarks owns apply/destroy measurement and lifecycle assertions
   rejected_alternatives:
-    - style: serverless
-      reason: Nao ha funcao ou evento para justificar esse estilo.
+    - style: duplicated-environment-roots
+      reason: It would let local and AWS declarations drift.
     - style: microservices
-      reason: A infraestrutura e um baseline pequeno, nao um sistema distribuido.
+      reason: This repository delivers infrastructure composition, not a distributed application.
 design_system:
   tokens: .portfolio/design-system/tokens.yaml
-  readme_components: [readme_header, benchmark_table, module_graph, limitations_section]
+  readme_components: [readme_header, benchmark_table, architecture_graph, limitations_section]
   diagram_required: true
 reuse:
   kit_version: local
-  uses: [catalog, programs, proficiency-map, component-packs, openspec-schema, decision-brain, agent-graph, reuse-improvement-loop, architecture, language-profiles, design-system, sdd, harness, templates, skills]
+  uses: [catalog, programs, component-packs, openspec-schema, decision-brain, agent-graph, cloud-local-first, architecture, language-profiles, sdd, harness, skills]
 benchmark:
-  primary_metric: provision_time_seconds
+  primary_metric: kumo_apply_seconds
   unit: seconds
-  command: python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
-  result_path: benchmarks/results/27-local-first.json
+  command: python tools/benchmark_v2.py --image terraform-aws-baseline:local
+  result_path: benchmarks/publication/27-kumo-provisioning-v2.json
 release:
-  docker: Dockerfile with validate and benchmark entrypoint
+  docker: One non-root image embeds pinned Terraform and Kumo and defaults to full verification.
   no_secret_default_path: true
   readme_has_number: true
   references_documented: true

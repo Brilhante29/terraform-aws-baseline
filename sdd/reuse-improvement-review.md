@@ -1,40 +1,19 @@
-# Reuse Improvement Review
+# Reuse improvement review
 
-Project: 27 - terraform-aws-baseline
+## Reuse consumed
 
-## Review Points
+- OpenSpec/SDD artifact graph and agent handoff.
+- Architecture selector and explicit rejected alternatives.
+- Cloud local-first rule with Kumo preferred over paid infrastructure.
+- Benchmark V2, clean-source provenance, Docker non-root, and full-history CI gates.
 
-- [x] after scaffold
-- [x] after architecture decision
-- [x] after first working slice
-- [x] after benchmark result
-- [x] before publication
-- [x] after CI design
+## Reusable deltas discovered
 
-## Findings
+1. **Terraform emulator adapter contract:** local and real provider roots must call the same module; a fake module does not prove substitutability.
+2. **Provider cache Docker pattern:** resolve provider locks in a Docker layer that depends only on version and lock files, not on source or documentation.
+3. **Infrastructure lifecycle evidence:** apply count, destroy count, and state emptiness belong beside timing metrics.
+4. **Compatibility exception record:** emulator gaps need a scoped service/API/version explanation and must not become a general conformance claim.
 
-| Finding | Classification | Kit Area | Action | Status |
-|---|---|---|---|---|
-| Provider-free Terraform benchmark needs an explicit distinction between plan evidence and cloud apply evidence. | backlog | harness, metrics, docs | Record a reusable benchmark field for simulated provisioning mode. | recorded |
-| Kumo should be referenced only when a concrete AWS-compatible operation is in scope. | reject | decision-brain, cloud | Keep this repository provider-free and document the boundary. | accepted |
+## Promotion target
 
-## Patch Now Decisions
-
-- No kit patch was required. Existing benchmark and cloud contracts already support provider-free adapter-fake mode.
-- The project adds no generic helper outside its own repository.
-
-## Backlog Decisions
-
-- Propose an optional benchmark schema field for provisioning_mode in the kit.
-- Consider a shared Terraform module contract test when more IaC projects need the same shape.
-
-## Rejected Improvements
-
-- Copying Kumo APIs without a concrete operation: rejected as invented surface.
-- Moving these three project-specific Terraform modules into the kit: rejected because their contract is project-specific.
-
-## Final Gate
-
-- [x] Reusable improvements were patched or recorded.
-- [x] Project-specific implementation was not moved into the kit.
-- [x] Validation reflects the benchmark mode and local adapter boundary.
+After exact-head CI passes, promote these rules and a Terraform/Kumo evidence contract into `portfolio-reuse-kit`. Do not copy project-specific resource names or benchmark numbers into the generic layer.

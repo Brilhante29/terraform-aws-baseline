@@ -1,4 +1,4 @@
-# Architecture Decision
+# Architecture decision: shared module with provider adapters
 
 ## Status
 
@@ -6,71 +6,37 @@ Accepted
 
 ## Context
 
-Project: #27 terraform-aws-baseline
-Claim: local-first Terraform baseline with an explicit AWS adapter
-Benchmark: provision_time_seconds
-
-Problem forces:
-
-- Domain complexity: low
-- Integration pressure: medium
-- UI state complexity: none
-- Data/ML reproducibility: low
-- Auditability/event history: medium
-- Throughput/async pressure: low
-- Independent deployability need: medium
+The original implementation used `terraform_data` as a local fake and duplicated AWS resources in a separate root. It validated quickly but did not prove provisioning, Kumo usage, or behavioral substitutability.
 
 ## Decision
 
-Chosen architecture: hexagonal module composition.
+Use a hexagonal infrastructure boundary:
 
-The root module is the composition boundary. The local adapter exposes the same capability outputs as the AWS adapter, while network, service and observability are separate modules with small variable and output contracts. The default root uses only Terraform builtin terraform_data, so static validation and plan are local and deterministic.
+- `modules/application-baseline` is the stable port and owns every resource declaration.
+- `adapters/kumo` configures the AWS provider for local Kumo endpoints.
+- `adapters/aws` configures the same provider for real AWS.
+- `benchmarks/benchmark.py` is the lifecycle harness and asserts resource parity.
 
-Dependency rule:
+Dependencies point inward from adapters to the module. No Kumo endpoint, fake credential, benchmark concern, or environment policy appears in the shared module.
 
-The root depends on module contracts. The local modules do not import cloud SDKs. The AWS provider and real resources exist only under adapters/aws and are never required by the default root.
+## SOLID and simplicity
 
-## Rejected Alternatives
-
-| Alternative | Why rejected |
-|---|---|
-| serverless | No function or event requirement exists. |
-| microservices | The artifact is one baseline, not a distributed runtime. |
-| Kumo-first emulation | It would add an unneeded provider surface without a claimed AWS operation. |
-
-## Folder Layout
-
-~~~text
-modules/{network,service,observability}/
-adapters/local/
-adapters/aws/
-fixtures/
-tests/
-benchmarks/
-tools/
-~~~
-
-## Testing Strategy
-
-- Unit and contract tests: Python stdlib checks module files, adapter wiring, fixture shape and benchmark contract.
-- Terraform validation: fmt, init with backend disabled and validate on the root local adapter.
-- Integration boundary: AWS adapter is statically inspectable and only runs after explicit provider init.
-- Benchmark: repeated validate and plan timings with no refresh and no apply.
+- SRP: module intent, local provider, real provider, and evidence have distinct owners.
+- OCP: another AWS-compatible adapter can reuse the module without changing its resources.
+- LSP: both adapters expose `adapter`, bucket, topic, table, and log-group outputs.
+- ISP: the module accepts only name, retention, and tags.
+- DIP: environment details depend on the module contract, not the reverse.
+- KISS/YAGNI: four capabilities are enough; remote state and landing-zone concerns remain outside scope.
 
 ## Consequences
 
-Positive:
+The local path now downloads the AWS provider and the image is larger, but it proves real provider calls. Kumo gaps must be documented rather than hidden. AWS apply remains an explicit, reviewed operation.
 
-- Default path is offline after the Terraform binary is available.
-- Module responsibilities are visible and independently replaceable.
-- AWS credentials cannot be accidentally required by root validation.
+## Rejected alternatives
 
-Tradeoffs:
-
-- terraform_data is a contract mock, not AWS emulation.
-- AWS adapter needs an existing ECS execution role and real environment review.
-- No remote state, IAM composition, ALB or NAT is included.
-
-Migration path:
-
-Add a module contract test against a pinned Kumo operation only when a concrete AWS capability is added, then keep that client behind the same adapter boundary.
+| Alternative | Reason |
+|---|---|
+| `terraform_data` local fake | Does not exercise provider APIs or Kumo. |
+| Duplicated Kumo/AWS modules | Creates drift and weakens substitution evidence. |
+| LocalStack | Conflicts with the portfolio's selected Kumo-first standard. |
+| Full landing zone | Too broad for one reproducible benchmark and requires account policy decisions. |

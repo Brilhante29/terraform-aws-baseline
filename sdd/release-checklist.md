@@ -1,12 +1,14 @@
-# Release Checklist
+# Release checklist
 
-- [x] docker build passes.
-- [x] docker run validation path is documented.
-- [x] Benchmark command runs from a clean checkout.
-- [x] Benchmark result is stored under benchmarks/results/.
-- [x] README opens with #27 and reports the result artifact.
-- [x] REFERENCES.md exists and records attribution.
-- [x] License exists.
-- [x] No empty directory is used as proof.
-- [x] No API key is required for the default path.
-- [x] Limitations and cleanup notes are written in README.
+- [x] Kumo and Terraform versions are pinned.
+- [x] Both provider lockfiles are committed.
+- [x] Local and AWS roots use one shared module.
+- [x] Default container runs as a non-root user.
+- [x] No AWS credential is required by default.
+- [x] Unit contracts cover resource ownership and adapter isolation.
+- [x] Terraform format/init/validate run for both adapters.
+- [x] Kumo smoke apply/destroy creates four and removes four resources.
+- [ ] Canonical three-run V1/V2 evidence is committed.
+- [ ] README reports the canonical number and provenance.
+- [ ] Exact-head GitHub Actions run is green.
+- [ ] Publication is recorded in `portfolio-reuse-kit`.

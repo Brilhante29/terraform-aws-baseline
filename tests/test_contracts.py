@@ -4,44 +4,46 @@ import json
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class BaselineContractTests(unittest.TestCase):
-    def test_local_module_graph_is_complete(self) -> None:
-        for module in ("network", "service", "observability"):
-            module_dir = ROOT / "modules" / module
-            self.assertTrue((module_dir / "main.tf").is_file())
-            self.assertTrue((module_dir / "variables.tf").is_file())
-            self.assertTrue((module_dir / "outputs.tf").is_file())
-            self.assertIn("terraform_data", (module_dir / "main.tf").read_text())
+    def test_shared_module_owns_every_cloud_resource(self) -> None:
+        module = (ROOT / "modules/application-baseline/main.tf").read_text()
+        for resource in (
+            "aws_s3_bucket",
+            "aws_sns_topic",
+            "aws_dynamodb_table",
+            "aws_cloudwatch_log_group",
+        ):
+            self.assertIn(resource, module)
 
-    def test_local_adapter_wires_all_capabilities(self) -> None:
-        main = (ROOT / "adapters/local/main.tf").read_text()
-        self.assertIn('source = "../../modules/network"', main)
-        self.assertIn('source = "../../modules/service"', main)
-        self.assertIn('source = "../../modules/observability"', main)
+    def test_both_adapters_depend_on_the_same_module(self) -> None:
+        source = 'source = "../../modules/application-baseline"'
+        self.assertIn(source, (ROOT / "adapters/kumo/main.tf").read_text())
+        self.assertIn(source, (ROOT / "adapters/aws/main.tf").read_text())
 
-    def test_aws_provider_is_outside_the_default_root(self) -> None:
-        self.assertNotIn("hashicorp/aws", (ROOT / "versions.tf").read_text())
-        self.assertIn("hashicorp/aws", (ROOT / "adapters/aws/versions.tf").read_text())
-        self.assertIn('value       = "local"', (ROOT / "outputs.tf").read_text())
+    def test_kumo_is_default_without_leaking_into_aws(self) -> None:
+        kumo = (ROOT / "adapters/kumo/provider.tf").read_text()
+        aws = (ROOT / "adapters/aws/versions.tf").read_text()
+        self.assertIn("endpoints {", kumo)
+        self.assertIn("skip_credentials_validation = true", kumo)
+        self.assertNotIn("endpoint_url", aws)
+        self.assertNotIn('access_key = "local"', aws)
 
     def test_fixture_is_non_secret_and_deterministic(self) -> None:
-        fixture = json.loads((ROOT / "fixtures/local-baseline.auto.tfvars.json").read_text())
+        fixture = json.loads((ROOT / "fixtures/kumo-baseline.tfvars.json").read_text())
         self.assertEqual(fixture["baseline_name"], "fixture-baseline")
-        self.assertEqual(fixture["availability_zones"], ["local-a", "local-b"])
-        self.assertNotIn("access_key", json.dumps(fixture).lower())
-        self.assertNotIn("secret_key", json.dumps(fixture).lower())
+        serialized = json.dumps(fixture).lower()
+        self.assertNotIn("access_key", serialized)
+        self.assertNotIn("secret_key", serialized)
 
-    def test_benchmark_contract_is_versioned(self) -> None:
-        result = json.loads((ROOT / "benchmarks/results/27-local-first.json").read_text())
-        self.assertEqual(result["project"], "27-terraform-aws-baseline")
-        self.assertEqual(result["metric"], "provision_time_seconds")
-        self.assertIn("schema_version", result)
-        self.assertIn("fixture_version", result)
-        self.assertIn("environment", result)
+    def test_runtime_and_provider_versions_are_pinned(self) -> None:
+        dockerfile = (ROOT / "Dockerfile").read_text()
+        versions = (ROOT / "adapters/kumo/versions.tf").read_text()
+        self.assertIn("kumo:0.28.1@sha256:", dockerfile)
+        self.assertIn("hashicorp/terraform:1.15.8", dockerfile)
+        self.assertIn('version = "5.100.0"', versions)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 output "adapter" {
-  value = "aws"
+  value = "kumo"
 }
 
 output "artifact_bucket" {

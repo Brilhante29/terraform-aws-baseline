@@ -11,26 +11,26 @@ jobs:
   strict-validation:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout full evidence history
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
-          terraform_version: 1.9.8
+          fetch-depth: 0
 
-      - name: Terraform format
-        run: terraform fmt -check -recursive
+      - name: Build pinned local-first harness
+        run: docker build -t terraform-aws-baseline:ci .
 
-      - name: Terraform validation
+      - name: Validate contracts and both adapters
+        run: docker run --rm terraform-aws-baseline:ci validate
+
+      - name: Reproduce Kumo provisioning benchmark
         run: |
-          terraform init -backend=false -input=false
-          terraform validate -no-color
+          docker create --name benchmark terraform-aws-baseline:ci benchmark \
+            --repeat 3 --warmup 1 \
+            --output /output/27-kumo-provisioning-v1.json
+          docker start -a benchmark
+          docker cp benchmark:/output/27-kumo-provisioning-v1.json "$RUNNER_TEMP/27-kumo-provisioning-v1.json"
+          docker rm benchmark
+          python -m json.tool "$RUNNER_TEMP/27-kumo-provisioning-v1.json" >/dev/null
 
-      - name: Contract tests
-        run: python -m unittest discover -s tests -v
-
-      - name: Reproducible benchmark
-        run: |
-          python benchmarks/benchmark.py --repeat 3 --output "$RUNNER_TEMP/27-local-first.json"
-          python -m json.tool "$RUNNER_TEMP/27-local-first.json" >/dev/null
+      - name: Validate committed publication evidence
+        run: docker run --rm -v "$PWD:/evidence:ro" -w /evidence terraform-aws-baseline:ci validate-publication

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = (
@@ -14,6 +13,11 @@ REQUIRED_FILES = (
     "REFERENCES.md",
     "AGENTS.md",
     "Dockerfile",
+    "adapters/kumo/main.tf",
+    "adapters/kumo/provider.tf",
+    "adapters/aws/main.tf",
+    "modules/application-baseline/main.tf",
+    "fixtures/kumo-baseline.tfvars.json",
     "sdd/spec.md",
     "sdd/benchmark-plan.md",
     "sdd/architecture-decision.md",
@@ -21,62 +25,91 @@ REQUIRED_FILES = (
     "sdd/agent-handoff.md",
     "sdd/reuse-improvement-review.md",
     "openspec/artifacts/verification.md",
-    "fixtures/local-baseline.auto.tfvars.json",
-    "benchmarks/results/27-local-first.json",
 )
 
 
 def run(command: list[str]) -> None:
-    print("$ " + " ".join(command))
+    print("$ " + " ".join(command), flush=True)
     subprocess.run(command, cwd=ROOT, check=True)
 
 
-def validate_benchmark() -> None:
-    path = ROOT / "benchmarks/results/27-local-first.json"
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    required = {"project", "metric", "value", "unit", "timestamp", "command"}
-    missing = required - payload.keys()
-    if missing:
-        raise ValueError(f"benchmark is missing fields: {sorted(missing)}")
-    if payload["project"] != "27-terraform-aws-baseline":
-        raise ValueError("benchmark project does not match project.yaml")
-    if payload["metric"] != "provision_time_seconds":
-        raise ValueError("benchmark metric does not match the project contract")
-    if not isinstance(payload["value"], (int, float)) or payload["value"] < 0:
-        raise ValueError("benchmark value must be a non-negative number")
-
-
-def validate_text_contracts() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    if not readme.startswith("#27 "):
-        raise ValueError("README must start with #27")
-    if "provision_time_seconds" not in readme:
-        raise ValueError("README must report the primary benchmark")
+def text_contract_errors() -> list[str]:
+    errors: list[str] = []
     for relative in REQUIRED_FILES:
         if not (ROOT / relative).is_file():
-            raise FileNotFoundError(relative)
-    for relative in ("sdd/spec.md", "sdd/architecture-decision.md", "sdd/technical-decision.md"):
+            errors.append(f"missing required file: {relative}")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if not readme.startswith("#27 "):
+        errors.append("README must start with #27")
+    if "kumo_apply_seconds" not in readme:
+        errors.append("README must report kumo_apply_seconds")
+    project = (ROOT / "project.yaml").read_text(encoding="utf-8")
+    if re.search(r"(?m)^status:\s*(benchmarked|published)\s*$", project) is None:
+        errors.append("project status must be benchmarked or published")
+    for relative in (
+        "sdd/spec.md",
+        "sdd/architecture-decision.md",
+        "sdd/technical-decision.md",
+    ):
         text = (ROOT / relative).read_text(encoding="utf-8")
-        if "<pending>" in text or "<project-name>" in text or "<style>" in text:
-            raise ValueError(f"unresolved placeholder in {relative}")
+        if any(marker in text for marker in ("<pending>", "<project-name>", "<style>")):
+            errors.append(f"unresolved placeholder in {relative}")
+    return errors
+
+
+def fixture_errors() -> list[str]:
+    fixture = json.loads(
+        (ROOT / "fixtures/kumo-baseline.tfvars.json").read_text(encoding="utf-8")
+    )
+    errors: list[str] = []
+    if fixture.get("baseline_name") != "fixture-baseline":
+        errors.append("fixture baseline_name changed")
+    serialized = json.dumps(fixture).lower()
+    for forbidden in ("access_key", "secret_key", "password", "token"):
+        if forbidden in serialized:
+            errors.append(f"fixture contains forbidden secret-shaped key: {forbidden}")
+    return errors
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--skip-terraform", action="store_true")
-    args = parser.parse_args()
-
-    try:
-        validate_text_contracts()
-        validate_benchmark()
-        run([sys.executable, "-m", "compileall", "-q", "tools", "tests", "benchmarks"])
-        run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
-        if not args.skip_terraform:
-            run(["terraform", "fmt", "-check", "-recursive"])
-            run(["terraform", "init", "-backend=false", "-input=false", "-no-color"])
-            run(["terraform", "validate", "-no-color"])
-    except (FileNotFoundError, ValueError, subprocess.CalledProcessError) as error:
-        print(f"validation failed: {error}", file=sys.stderr)
+    errors = text_contract_errors() + fixture_errors()
+    for error in errors:
+        print(f"validation error: {error}", file=sys.stderr)
+    if errors:
+        return 1
+    commands = [
+        [sys.executable, "-m", "compileall", "-q", "tools", "tests", "benchmarks"],
+        [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
+        ["terraform", "fmt", "-check", "-recursive"],
+        [
+            "terraform",
+            "-chdir=adapters/kumo",
+            "init",
+            "-backend=false",
+            "-input=false",
+            "-no-color",
+        ],
+        ["terraform", "-chdir=adapters/kumo", "validate", "-no-color"],
+        [
+            "terraform",
+            "-chdir=adapters/aws",
+            "init",
+            "-backend=false",
+            "-input=false",
+            "-no-color",
+        ],
+        ["terraform", "-chdir=adapters/aws", "validate", "-no-color"],
+        [sys.executable, "tools/validate-publication.py"],
+    ]
+    failures: list[str] = []
+    for command in commands:
+        try:
+            run(command)
+        except (FileNotFoundError, subprocess.CalledProcessError) as error:
+            failures.append(f"{' '.join(command)}: {error}")
+    for failure in failures:
+        print(f"validation error: {failure}", file=sys.stderr)
+    if failures:
         return 1
     print("strict project validation passed")
     return 0

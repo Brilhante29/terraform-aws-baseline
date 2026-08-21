@@ -1,119 +1,40 @@
-# Technical Decision
+# Technical decision
 
-## Status
+## Selected stack
 
-Accepted
+- Terraform 1.15.8, latest stable patch selected on 2026-08-21.
+- HashiCorp AWS provider 5.100.0, locked identically in both adapters.
+- Kumo 0.28.1, pinned by tag and container digest.
+- Python 3.12 stdlib for orchestration plus pinned `jsonschema` for the shared V2 evidence contract.
+- Docker and GitHub Actions as the reproducible execution boundary.
 
-## Decision Type
+## Why this stack
 
-stack, cloud, runtime and benchmark
+Terraform expresses resource intent and provider replacement directly. Kumo supplies a credential-free AWS-compatible API for CI and local development. Python controls process readiness, lifecycle timing, assertions, evidence hashing, and failure diagnostics without adding an application framework.
 
-## Context
+## Cloud boundary
 
-Project: #27 terraform-aws-baseline
-Problem: demonstrate small, replaceable Terraform cloud adapters with a no-secret benchmark
-Portfolio program: delivery-observability-infra
-Public signal: Terraform module design, CI validation and reproducible infrastructure evidence
-Benchmark: provision_time_seconds
+`adapters/kumo/provider.tf` contains local credentials, validation skips, path-style S3, and endpoints. `adapters/aws/versions.tf` contains no local endpoint or fake credential. Both roots call `modules/application-baseline` and expose equivalent outputs.
 
-## Selected Option
+The switch is directory selection, not conditionals spread through resources:
 
-Selected: Terraform 1.9.8 root with builtin terraform_data local adapter, Python stdlib harness, and an opt-in AWS provider adapter.
+```text
+terraform -chdir=adapters/kumo ...  # local default
+terraform -chdir=adapters/aws ...   # explicit real cloud
+```
 
-Reason:
+## Compatibility decisions
 
-Terraform expresses the desired infrastructure contract directly. terraform_data keeps the default path provider-free and makes plan output deterministic. The AWS adapter proves the real-cloud seam without forcing provider download, account access or paid resources into the benchmark.
+Kumo 0.28.1 supports the selected S3, SNS, DynamoDB, and CloudWatch Logs APIs. S3 bucket tagging is omitted from the shared resource because the AWS provider's post-create `PutBucketTagging` request is interpreted by this Kumo version as a duplicate bucket creation. This is a scoped compatibility decision, not a parity claim.
 
-## Decision Brain Fields
+## Security and operations
 
-- Stack profile: terraform
-- API style: cli
-- Messaging: none
-- Cloud mode: adapter-fake
-- Database/runtime: none; Terraform 1.9.8 and Python 3.12
-- Library policy: stdlib and builtin Terraform in default path; provider AWS only in adapters/aws
+- The default path runs as UID 10001 and contains no user secret.
+- AWS credentials are consumed only by the real adapter through the standard provider chain.
+- AWS apply is excluded from CI.
+- Benchmark state is local, container-scoped, and deleted after every cycle.
+- Remote state, encryption policy, IAM, and cost controls must be selected by the consuming environment.
 
-## Engineering Principles
+## Version policy
 
-Coupling boundary:
-
-Local modules and tests do not depend on the AWS provider. The AWS provider is an infrastructure adapter, never a dependency of the local contract.
-
-SOLID application:
-
-- SRP: network, service, observability, local composition and AWS composition have separate reasons to change.
-- OCP: a new provider adapter can implement the existing output shape without rewriting local module contracts.
-- LSP: local and AWS adapters expose network, service and log outputs, with documented differences.
-- ISP: each module accepts only the inputs needed for its capability.
-- DIP: the root composes an adapter boundary instead of embedding AWS resources.
-
-Simplicity:
-
-- KISS: three modules and one fixture are enough to prove the claim.
-- YAGNI: no state backend, IAM module, ALB, NAT, broker or Kumo runtime was added.
-- DRY: shared names, tags and outputs are composed at the adapter boundary instead of duplicated across the root.
-- Law of Demeter: callers consume direct module outputs; no nested resource details leak into the root.
-
-Testability evidence:
-
-- Python contract tests run without Terraform, AWS, Docker or network access.
-- Root Terraform validate and plan run without AWS credentials.
-- The benchmark records adapter and compatibility diagnostics.
-
-## Rejected Options
-
-| Option | Why rejected |
-|---|---|
-| Kumo runtime | No concrete AWS operation is claimed; no API is invented. |
-| AWS provider in root | Provider download and account-shaped configuration would pollute the default no-secret path. |
-| LocalStack | Larger mutable runtime than the claim requires. |
-| tflint/checkov as hard dependencies | Useful complements, but not needed for the provider-free benchmark proof. |
-
-## API Contract
-
-Contract artifact: Terraform variables and outputs plus JSON benchmark schema.
-
-No HTTP, GraphQL or event API is required.
-
-## Cloud Local-First
-
-Local provider: terraform_data builtin contract mock
-
-Real provider target: aws
-
-Config switch:
-
-~~~text
-Default:
-terraform init -backend=false
-Opt-in real adapter:
-terraform -chdir=adapters/aws init
-~~~
-
-Unsupported local behaviors:
-
-- No VPC, subnet, ECS or CloudWatch resource exists locally.
-- No Kumo endpoint or AWS-compatible service is started.
-- No AWS conformance or cost claim is made.
-
-## Benchmark Impact
-
-Expected impact:
-
-The provider-free root should make plan validation quick and repeatable while keeping the measured primary metric honest: simulated provisioning only.
-
-Validation command:
-
-~~~powershell
-python tools/validate.py
-~~~
-
-## Operational Cost
-
-- Docker services added: none
-- Local demo complexity: low
-- Failure case required: invalid variable contract and missing AWS role are documented boundaries
-
-## Follow-up
-
-When a concrete AWS-compatible capability is added, add a narrow local parity test and pin the Kumo image by digest before claiming emulator coverage.
+Runtime versions, Python dependency, provider lockfiles, and Kumo image digest are committed. Renovation is explicit: update one version at a time, rebuild, run the full lifecycle benchmark, and publish a new comparability key.

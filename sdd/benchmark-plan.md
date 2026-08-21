@@ -1,44 +1,38 @@
-# Benchmark Plan: terraform-aws-baseline
+# Benchmark plan: Kumo provisioning
 
 ## Hypothesis
 
-A provider-free Terraform root with three small modules can validate and produce a simulated plan quickly without AWS credentials or cloud resources.
+A single container can provision and destroy a four-resource application baseline through the AWS provider and Kumo without cloud credentials, while preserving an adapter-only path to AWS.
 
-## Command
+## Canonical command
 
-~~~sh
-python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
-~~~
+```sh
+python tools/benchmark_v2.py --image terraform-aws-baseline:local
+```
 
-## Environment
+The producer refuses a dirty tree, builds the image, executes the V1 benchmark in a stopped-and-copied container, and emits V2 evidence locked to source and image digests.
 
-The committed result records the operating system, Python version, Terraform version, adapter, fixture path and credential requirement. Repeat on a clean checkout with Terraform 1.9.8 or a compatible 1.x release.
+## Workload
 
-## Inputs
-
-- fixture: fixtures/local-baseline.auto.tfvars.json
-- fixture version: 1.0.0
-- baseline: two logical zones, one service and one observability contract
-- repetitions: 3
-- warmup: one terraform init outside the timed samples
-- refresh: disabled for plan samples
-- apply: never executed
+- Fixture version: 2.0.0.
+- Warmup: one complete apply/destroy cycle.
+- Measurement: three sequential apply/destroy cycles.
+- Concurrency: one.
+- Resources per apply: S3 bucket, SNS topic, DynamoDB table, CloudWatch log group.
+- State assertion: four resources after apply and zero after destroy.
 
 ## Metrics
 
-| Metric | Unit | Source | Why it matters |
-|---|---:|---|---|
-| provision_time_seconds | seconds | median terraform plan | proves simulated provisioning cost |
-| validation_median_seconds | seconds | median terraform validate | shows static validation cost |
-
-## Result schema
-
-Output is JSON under benchmarks/results/ and includes project, metric, value, unit, timestamp, command, schema_version, fixture_version, samples, summary, environment, operations and compatibility_diagnostics.
+| Metric | Unit | Direction | Requirement |
+|---|---|---|---|
+| `kumo_apply_seconds` | seconds | lower | Median of three successful applies |
+| `kumo_destroy_seconds` | seconds | lower | Median of three successful destroys |
+| `resource_parity` | ratio | target | Exactly 1.0 in every run |
 
 ## Interpretation
 
-Lower is better. The primary number is plan time only. It must not be presented as AWS apply time, cloud API latency, resource creation time or cost.
+The timing includes Terraform provider work against a local Kumo process. It excludes image build and provider download. It is not an AWS latency, cost, scale, or conformance measurement. Compare results only when the V2 comparability key matches.
 
-## Post angle
+## Failure policy
 
-#27 terraform-aws-baseline: reproducible Terraform validation and simulated provisioning with an explicit local-to-AWS adapter boundary.
+Any Terraform nonzero exit, Kumo readiness failure, wrong adapter output, resource count other than four, or nonempty state after destroy aborts publication. Failed samples are never silently removed.

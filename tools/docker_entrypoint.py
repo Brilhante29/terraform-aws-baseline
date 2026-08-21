@@ -4,16 +4,35 @@ import subprocess
 import sys
 
 
+def run(arguments: list[str]) -> int:
+    return subprocess.run(arguments, check=False).returncode
+
+
 def main() -> int:
-    command = sys.argv[1] if len(sys.argv) > 1 else "validate"
+    command = sys.argv[1] if len(sys.argv) > 1 else "verify"
+    rest = sys.argv[2:]
     if command == "validate":
-        args = [sys.executable, "tools/validate.py"]
-    elif command == "benchmark":
-        args = [sys.executable, "benchmarks/benchmark.py", *sys.argv[2:]]
-    else:
-        print(f"unsupported command: {command}", file=sys.stderr)
-        return 2
-    return subprocess.run(args, check=False).returncode
+        return run([sys.executable, "tools/validate.py"])
+    if command == "benchmark":
+        return run([sys.executable, "benchmarks/benchmark.py", *rest])
+    if command == "validate-publication":
+        return run([sys.executable, "tools/validate-publication.py"])
+    if command == "verify":
+        validation = run([sys.executable, "tools/validate.py"])
+        if validation != 0:
+            return validation
+        return run(
+            [
+                sys.executable,
+                "benchmarks/benchmark.py",
+                "--repeat",
+                "3",
+                "--output",
+                "/output/27-kumo-provisioning-v1.json",
+            ]
+        )
+    print(f"unsupported command: {command}", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

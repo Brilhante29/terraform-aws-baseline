@@ -1,112 +1,89 @@
 #27 terraform-aws-baseline
 
-**Claim:** baseline de infraestrutura como codigo com Terraform, modulos desacoplados e troca explicita de adapter.
+**Claim:** the same Terraform module provisions an application baseline locally on Kumo and, by changing only the provider adapter, on AWS.
 
-**Benchmark atual:** `provision_time_seconds` mede o tempo mediano de um `terraform plan` local sobre a fixture versionada. O numero exato, o ambiente e as amostras estao em `benchmarks/results/27-local-first.json`.
+**Benchmark:** `kumo_apply_seconds` measures the median of three real `terraform apply` cycles. Every cycle creates and destroys four AWS-compatible resources; no AWS account, credential, or paid service is used.
 
-**Status:** benchmarked. O caminho padrao nao exige conta AWS, credenciais ou recursos pagos.
+> Publication evidence is generated from a clean source commit. The exact median, samples, image digest, and source commit are recorded under `benchmarks/` after the canonical run.
 
 ## Run
 
-~~~sh
+```sh
 docker build -t terraform-aws-baseline .
 docker run --rm terraform-aws-baseline
-~~~
+```
 
-A imagem valida formato, inicializa o root sem backend remoto, executa os testes de contrato e verifica o JSON do benchmark.
+The default command validates both adapters, starts the pinned Kumo binary, runs one warmup plus three measured apply/destroy cycles, and prints the benchmark JSON.
 
-Para gerar e persistir um novo resultado:
+## What gets provisioned
 
-~~~sh
-docker run --rm -v "$(pwd)/benchmarks/results:/workspace/benchmarks/results" terraform-aws-baseline benchmark --repeat 3
-~~~
+| Capability | Shared Terraform resource | Local runtime | Real cloud |
+|---|---|---|---|
+| Artifacts | S3 bucket | Kumo S3 | Amazon S3 |
+| Events | SNS topic | Kumo SNS | Amazon SNS |
+| State | DynamoDB table | Kumo DynamoDB | Amazon DynamoDB |
+| Logs | CloudWatch log group | Kumo Logs | CloudWatch Logs |
 
-No PowerShell, use `$(Get-Location)/benchmarks/results:/workspace/benchmarks/results`.
+Both adapters call `modules/application-baseline`. Resource definitions are not duplicated.
 
-## Benchmark
+```text
+fixtures/kumo-baseline.tfvars.json
+                 |
+        adapters/kumo ---- Kumo 0.28.1 (default, local)
+                 | provider endpoint switch
+        adapters/aws  ---- AWS (explicit opt-in)
+                 |
+      modules/application-baseline
+        | S3 | SNS | DynamoDB | CloudWatch Logs
+```
 
-~~~sh
-python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
-~~~
+## Reproduce the benchmark
 
-A medicao separa validacao estatica de provisionamento simulado. O campo `provision_time_seconds` e o tempo mediano do plan, nao o tempo de um apply.
+```sh
+docker run --rm terraform-aws-baseline \
+  benchmark --repeat 3 --warmup 1 \
+  --output /output/27-kumo-provisioning-v1.json
+```
 
-| Metric | Result | Unit |
-|---|---:|---|
-| provision_time_seconds | 0.160044 | seconds |
-| validation_median_seconds | 0.096398 | seconds |
+The publication producer enforces a clean Git tree and locks evidence to the source commit and image digest:
 
-O resultado inclui schema, fixture, comando, repeticoes, amostras, ambiente, versao Terraform, adapter, operacoes e diagnosticos de compatibilidade.
+```sh
+python tools/benchmark_v2.py --image terraform-aws-baseline:local
+```
 
-## Architecture
+Primary metric: `kumo_apply_seconds` (lower is better). Secondary evidence includes median destroy time and `resource_parity`, which must equal `1.0` for all runs.
 
-~~~text
-root module
-  -> adapters/local
-       -> modules/network
-       -> modules/service
-       -> modules/observability
+## Adapter boundary
 
-adapters/aws
-  -> AWS VPC, public subnets, ECS service, and CloudWatch log group
-~~~
+The Kumo adapter configures the AWS provider with local credentials, path-style S3, validation skips, and service endpoints at `127.0.0.1:4566`. The AWS adapter has no emulator endpoint or fake credential. The shared module receives only typed domain inputs.
 
-Os tres modulos locais recebem variaveis tipadas, registram intencao em `terraform_data` e expoem outputs estaveis. O root compoe somente o adapter local. O adapter AWS e uma configuracao independente, opt-in, que mapeia a mesma intencao para recursos AWS.
+This applies SRP, OCP, LSP, ISP, and DIP at the infrastructure boundary: provider configuration changes independently, both adapters expose the same outputs, and consumers depend on one module contract. KISS and YAGNI keep remote state, IAM bootstrap, networking, and paid execution outside this focused proof.
 
-## Inputs and outputs
+## Use real AWS
 
-| Variable | Default | Purpose |
-|---|---|---|
-| baseline_name | baseline | Prefixo estavel |
-| cidr_block | 10.42.0.0/16 | CIDR da rede |
-| availability_zones | local-a, local-b | Zonas logicas |
-| service_image | example/service:1.0.0 | Imagem do contrato |
-| service_replicas | 2 | Replicas desejadas |
-| log_retention_days | 7 | Retencao solicitada |
-| service_environment | MODE=local | Valores nao secretos |
-| tags | project, managed_by | Metadados |
+Real-cloud execution is deliberately not part of CI:
 
-O root exporta `adapter`, `network_id`, `private_subnet_ids`, `service_id` e `log_group_name`.
-
-## Local-first boundary
-
-O default usa apenas o provider builtin do Terraform e `terraform_data`. Isso e um mock de contrato local: nao cria VPC, subnet, ECS ou CloudWatch e nao afirma compatibilidade AWS.
-
-Kumo permanece apenas como referencia do portfolio para quando houver uma operacao AWS compativel a emular. Este projeto nao inventa endpoints ou APIs Kumo e nao o inicia no benchmark. O JSON registra `kumo_used=false` e `aws_conformance_claim=false`.
-
-## Switching to AWS
-
-O adapter real fica fora do root local:
-
-~~~sh
+```sh
 terraform -chdir=adapters/aws init
-terraform -chdir=adapters/aws plan   -var='execution_role_arn=arn:aws:iam::ACCOUNT:role/ecsTaskExecutionRole'
-~~~
+terraform -chdir=adapters/aws plan -var='baseline_name=your-unique-name'
+terraform -chdir=adapters/aws apply -var='baseline_name=your-unique-name'
+```
 
-Use credenciais fornecidas pelo ambiente AWS e uma revisao explicita antes de `apply`. O adapter cria VPC com subnets publicas, ECS Fargate e CloudWatch Logs; nao cria IAM, ALB, NAT Gateway ou dominio. Revise custo, egress e seguranca antes de uso real.
+Provide credentials through the standard AWS provider chain. Review naming, IAM, state storage, encryption, retention, and cost before apply. The example uses local Terraform state and is a portfolio baseline, not an organization landing zone.
 
-## Checks
+## Quality gates
 
-~~~sh
-terraform fmt -check -recursive
-terraform init -backend=false -input=false
-terraform validate
-python -m unittest discover -s tests -v
-python tools/validate.py
-~~~
+```sh
+docker run --rm terraform-aws-baseline validate
+```
 
-CI repete formato, init/validate, testes de contrato e benchmark em `.github/workflows/ci.yml`.
+The gate runs Python contract tests, `terraform fmt -check`, provider-locked initialization, validation of both adapters, and publication-evidence validation. GitHub Actions rebuilds the image and reproduces the Kumo benchmark.
 
-## Limitations
+## Scope and honesty
 
-- O local adapter representa intencao; nao e um emulador AWS.
-- O benchmark mede plan, nao apply, latencia de APIs ou custo.
-- O adapter AWS requer role ECS existente e revisao de rede publica.
-- tflint/checkov ficam como complementos opcionais; nao sao dependencias do caminho provider-free.
+- Kumo is an AWS-compatible emulator, not proof of complete AWS behavioral parity.
+- The benchmark is local container provisioning time, not AWS provisioning latency.
+- S3 bucket tags are omitted from the shared resource because Kumo 0.28.1 does not reproduce the provider's `PutBucketTagging` behavior; the real AWS adapter can still apply provider default tags.
+- State is local and ephemeral in the benchmark. Production remote-state design remains environment-specific.
 
-## References
-
-- Terraform language and module docs: https://developer.hashicorp.com/terraform/language
-- AWS provider docs: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
-- Kumo reference: https://github.com/sivchari/kumo
-- Portfolio contracts and decisions: `.portfolio/`
+See `sdd/technical-decision.md` for the decision record and `REFERENCES.md` for primary sources.

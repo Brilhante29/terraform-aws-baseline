@@ -1,76 +1,27 @@
 # Spec: terraform-aws-baseline
 
-## Number
+## Intent
 
-#27
+Prove that one typed Terraform module can execute through a free local AWS-compatible runtime and remain deployable to real AWS by replacing provider configuration only.
 
-## Claim
+## Acceptance criteria
 
-Provar uma baseline pequena de infraestrutura como codigo que valida sem credenciais AWS, separa modulos de rede, servico e observabilidade e deixa o provider real atras de um adapter opt-in.
+- `docker run --rm terraform-aws-baseline` requires no AWS credentials.
+- Kumo 0.28.1 is executed, not listed as a future option.
+- One shared module declares S3, SNS, DynamoDB, and CloudWatch Logs resources.
+- Local and AWS adapters expose the same output contract.
+- The benchmark performs one warmup and three measured apply/destroy cycles.
+- Each measured apply leaves exactly four Terraform resources; each destroy leaves zero.
+- V2 evidence identifies a clean source commit and image digest.
+- CI validates both adapters and reproduces the local benchmark.
 
-## Stack
+## Out of scope
 
-- Terraform 1.9.8
-- Python stdlib
-- Docker
-- GitHub Actions
+- AWS apply in CI, paid services, or repository secrets.
+- Complete AWS behavioral conformance.
+- Remote state, account vending, IAM bootstrap, networking, or organization policy.
+- Performance comparison between Kumo and AWS.
 
-## User-visible output
+## User contract
 
-- Docker default: `docker run --rm terraform-aws-baseline`
-- Benchmark command: `python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json`
-- Primary metric: `provision_time_seconds`
-
-## Scope
-
-In:
-
-- Root Terraform local com terraform_data e fixture versionada.
-- Modulos network, service e observability com variaveis e outputs.
-- Adapter AWS separado com provider AWS e ECS/VPC/CloudWatch.
-- Testes de contrato, Docker, CI e benchmark JSON.
-- Documentacao de troca local para AWS e limites de emulacao.
-
-Out:
-
-- Apply AWS no caminho default.
-- Credenciais, state remoto, IAM, ALB, NAT Gateway ou custo de conta real.
-- Claim de paridade completa com AWS ou Kumo.
-
-## Architecture
-
-~~~text
-root -> adapters/local -> modules/network, modules/service, modules/observability
-root local has no external provider
-adapters/aws -> real AWS provider and resources, opt-in only
-~~~
-
-## Benchmark
-
-Primary metric:
-
-- name: provision_time_seconds
-- meaning: median time of terraform plan with refresh disabled on the local fixture
-- command: python benchmarks/benchmark.py --repeat 3 --output benchmarks/results/27-local-first.json
-- result file: benchmarks/results/27-local-first.json
-
-Secondary metric:
-
-- validation_median_seconds: median terraform validate time after local init
-
-## Fixture
-
-- source: fixtures/local-baseline.auto.tfvars.json
-- version: 1.0.0
-- size: one baseline with two logical zones, one service and one log contract
-- license: project-local
-- deterministic seed: no random seed; identifiers are hashes of Terraform inputs
-
-## Definition of done
-
-- [x] Docker command works from clean checkout.
-- [x] README starts with project number and reports the benchmark artifact.
-- [x] Benchmark command writes JSON result.
-- [x] Tests cover module and adapter contracts.
-- [x] REFERENCES.md explains reuse and attribution.
-- [x] No secret or paid credential is required for the default demo.
+Default: one Docker run performs validation and the benchmark. Real AWS is an explicit command under `adapters/aws` and never an implicit fallback.
