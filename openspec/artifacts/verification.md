@@ -21,4 +21,5 @@ One shared Terraform module can be provisioned locally through Kumo and remain t
 - Apply median: 11.2674 seconds.
 - Destroy median: 14.2319 seconds.
 - Resource parity: 1.0 in 3/3 measured runs.
-- Exact-head CI: pending publication commit.
+- Code-bearing CI: run `32449172485` succeeded on `5fcdf3262dc5231117245a278ecb1b82d956ab31`.
+- Final metadata commit remains subject to the same exact-head workflow before central publication.

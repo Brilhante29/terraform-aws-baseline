@@ -15,8 +15,8 @@ Project #27 is publication-ready in `delivery-observability-infra`. The previous
 
 ## Next action
 
-1. Commit evidence and exact numbers.
-2. Push the delivery branch to `main` and require exact-head CI success.
-3. Promote only generic Terraform/Kumo patterns to `portfolio-reuse-kit`.
+1. Require exact-head CI on the final metadata commit.
+2. Promote only generic Terraform/Kumo patterns to `portfolio-reuse-kit`.
+3. Record publication centrally and activate #29 `load-test-suite`.
 
 Never claim that Kumo timing predicts AWS timing or that the selected operations establish full AWS conformance.

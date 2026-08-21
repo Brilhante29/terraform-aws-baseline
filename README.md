@@ -1,10 +1,14 @@
 #27 terraform-aws-baseline
 
+[![validation](https://github.com/Brilhante29/terraform-aws-baseline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Brilhante29/terraform-aws-baseline/actions/workflows/ci.yml)
+
 **Claim:** the same Terraform module provisions an application baseline locally on Kumo and, by changing only the provider adapter, on AWS.
 
 **Benchmark:** `kumo_apply_seconds` = **11.2674 seconds median** across three real `terraform apply` cycles. Median destroy time is **14.2319 seconds**, with **1.0 resource parity in 3/3 runs**. No AWS account, credential, or paid service is used.
 
 Source commit: `bd51cd134a4b1c2742bbacfe833bbc4dda9a2db5`. Image digest: `sha256:198b11d02a761401632a8c2d20dd51ada744763dc7310628b82999d744ae2725`.
+
+Code-bearing publication gate: [GitHub Actions run 32449172485](https://github.com/Brilhante29/terraform-aws-baseline/actions/runs/32449172485), successful on `5fcdf3262dc5231117245a278ecb1b82d956ab31`.
 
 ## Run
 

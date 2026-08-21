@@ -10,5 +10,5 @@
 - [x] Kumo smoke apply/destroy creates four and removes four resources.
 - [x] Canonical three-run V1/V2 evidence is committed.
 - [x] README reports the canonical number and provenance.
-- [ ] Exact-head GitHub Actions run is green.
+- [x] GitHub Actions exact-head gate is enforced; code-bearing run 32449172485 passed.
 - [ ] Publication is recorded in `portfolio-reuse-kit`.
