@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "fixture_version": "2.0.0",
+  "project": "terraform-aws-baseline",
+  "metric": "kumo_apply_seconds",
+  "value": 11.26739968900074,
+  "unit": "seconds",
+  "timestamp": "2026-08-21T04:59:00.671702Z",
+  "command": "docker run --rm terraform-aws-baseline benchmark --repeat 3 --output /output/27-kumo-provisioning-v1.json",
+  "repeat": 3,
+  "warmup": 1,
+  "samples": [
+    11.26739968900074,
+    11.277455605999421,
+    11.098376023001038
+  ],
+  "metrics": {
+    "destroy_seconds": [
+      14.26692792600079,
+      14.231930959000238,
+      13.666653423999378
+    ],
+    "resource_parity": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  },
+  "summary": {
+    "apply_min_seconds": 11.098376023001038,
+    "apply_median_seconds": 11.26739968900074,
+    "apply_max_seconds": 11.277455605999421,
+    "destroy_median_seconds": 14.231930959000238
+  },
+  "execution": {
+    "duration_seconds": 127.48470319999979,
+    "failures": 0
+  },
+  "environment": {
+    "os": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with",
+    "architecture": "x86_64",
+    "python": "3.12.14",
+    "terraform": "Terraform v1.15.8",
+    "kumo": "0.28.1",
+    "aws_provider": "5.100.0",
+    "adapter": "kumo",
+    "aws_credentials_required": false
+  },
+  "operations": {
+    "resources_per_apply": 4,
+    "resource_counts": [
+      4,
+      4,
+      4
+    ],
+    "apply_cycles": 3,
+    "destroy_cycles": 3
+  },
+  "compatibility_diagnostics": {
+    "kumo_used": true,
+    "aws_provider_loaded": true,
+    "shared_module_with_aws": true,
+    "aws_conformance_claim": false
+  }
+}
