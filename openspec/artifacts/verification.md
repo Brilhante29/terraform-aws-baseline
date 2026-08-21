@@ -16,4 +16,9 @@ One shared Terraform module can be provisioned locally through Kumo and remain t
 
 ## Current result
 
-Smoke lifecycle passed on 2026-08-21. Canonical three-run evidence remains the release gate and will replace this line with its source commit, image digest, and exact-head CI run.
+- Source commit: `bd51cd134a4b1c2742bbacfe833bbc4dda9a2db5`.
+- Image digest: `sha256:198b11d02a761401632a8c2d20dd51ada744763dc7310628b82999d744ae2725`.
+- Apply median: 11.2674 seconds.
+- Destroy median: 14.2319 seconds.
+- Resource parity: 1.0 in 3/3 measured runs.
+- Exact-head CI: pending publication commit.

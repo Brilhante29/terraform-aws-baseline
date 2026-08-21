@@ -32,5 +32,12 @@ jobs:
           docker rm benchmark
           python -m json.tool "$RUNNER_TEMP/27-kumo-provisioning-v1.json" >/dev/null
 
+      - name: Set up publication validator
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.12"
+
       - name: Validate committed publication evidence
-        run: docker run --rm -v "$PWD:/evidence:ro" -w /evidence terraform-aws-baseline:ci validate-publication
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python tools/validate-publication.py

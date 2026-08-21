@@ -1,0 +1,86 @@
+{
+  "schema_version": 2,
+  "run_id": "66b8bf46-9703-4b7c-ae23-b33e94fa315d",
+  "project": "terraform-aws-baseline",
+  "benchmark_id": "kumo-provisioning",
+  "workload": {
+    "version": "2.0.0",
+    "fixture_digest": "sha256:c9c92d211720fc11b4f82a444ccc7f2b99aaed2320e5799094914adc4fa8a7fc",
+    "config_digest": "sha256:1f78ddf206b29d5ae01eb6f5a55dbcd9a9bc1604dfa4bf6745578040bec4e684",
+    "warmup_iterations": 1,
+    "measured_iterations": 3,
+    "concurrency": 1
+  },
+  "metrics": [
+    {
+      "name": "kumo_apply_seconds",
+      "value": 11.26739968900074,
+      "unit": "seconds",
+      "direction": "lower_is_better",
+      "samples": [
+        11.26739968900074,
+        11.277455605999421,
+        11.098376023001038
+      ],
+      "failures": 0,
+      "summary": {
+        "min": 11.098376023001038,
+        "median": 11.26739968900074,
+        "max": 11.277455605999421
+      }
+    },
+    {
+      "name": "kumo_destroy_seconds",
+      "value": 14.231930959000238,
+      "unit": "seconds",
+      "direction": "lower_is_better",
+      "samples": [
+        14.26692792600079,
+        14.231930959000238,
+        13.666653423999378
+      ],
+      "failures": 0,
+      "summary": {
+        "median": 14.231930959000238
+      }
+    },
+    {
+      "name": "resource_parity",
+      "value": 1.0,
+      "unit": "ratio",
+      "direction": "target",
+      "samples": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "failures": 0,
+      "summary": {
+        "target": 1.0,
+        "resources_per_apply": 4
+      }
+    }
+  ],
+  "execution": {
+    "command": "docker run --rm terraform-aws-baseline benchmark --repeat 3",
+    "started_at": "2026-08-21T04:59:00.009183Z",
+    "duration_seconds": 128.595276,
+    "exit_code": 0,
+    "repeat": 3
+  },
+  "environment": {
+    "runtime": "terraform-1.15.8+kumo-0.28.1+python-3.12.14",
+    "architecture": "x86_64",
+    "hardware_class": "docker-local"
+  },
+  "provenance": {
+    "source_commit": "bd51cd134a4b1c2742bbacfe833bbc4dda9a2db5",
+    "clean_tree": true,
+    "image_ref": "terraform-aws-baseline:local@sha256:198b11d02a761401632a8c2d20dd51ada744763dc7310628b82999d744ae2725",
+    "image_digest": "sha256:198b11d02a761401632a8c2d20dd51ada744763dc7310628b82999d744ae2725",
+    "dependency_lock_digest": "sha256:aa20a7c88bd7008cd65aa24758233c3a7c5fe9f10fa40d44c356b91e75762217",
+    "producer": "local",
+    "artifact_digest": "sha256:1e7e0727ff80993b149f3baf38b79ac8ce402e72db8af504333890fa9de4720b"
+  },
+  "comparability_key": "kumo-provisioning:2.0.0:resources-4:runs-3:concurrency-1:terraform-1.15.8:kumo-0.28.1:aws-provider-5.100.0"
+}

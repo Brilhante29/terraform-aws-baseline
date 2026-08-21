@@ -2,9 +2,9 @@
 
 **Claim:** the same Terraform module provisions an application baseline locally on Kumo and, by changing only the provider adapter, on AWS.
 
-**Benchmark:** `kumo_apply_seconds` measures the median of three real `terraform apply` cycles. Every cycle creates and destroys four AWS-compatible resources; no AWS account, credential, or paid service is used.
+**Benchmark:** `kumo_apply_seconds` = **11.2674 seconds median** across three real `terraform apply` cycles. Median destroy time is **14.2319 seconds**, with **1.0 resource parity in 3/3 runs**. No AWS account, credential, or paid service is used.
 
-> Publication evidence is generated from a clean source commit. The exact median, samples, image digest, and source commit are recorded under `benchmarks/` after the canonical run.
+Source commit: `bd51cd134a4b1c2742bbacfe833bbc4dda9a2db5`. Image digest: `sha256:198b11d02a761401632a8c2d20dd51ada744763dc7310628b82999d744ae2725`.
 
 ## Run
 
@@ -53,6 +53,14 @@ python tools/benchmark_v2.py --image terraform-aws-baseline:local
 
 Primary metric: `kumo_apply_seconds` (lower is better). Secondary evidence includes median destroy time and `resource_parity`, which must equal `1.0` for all runs.
 
+| Metric | Result | Samples |
+|---|---:|---:|
+| `kumo_apply_seconds` | 11.2674 s median | 11.2674, 11.2775, 11.0984 |
+| `kumo_destroy_seconds` | 14.2319 s median | 14.2669, 14.2319, 13.6667 |
+| `resource_parity` | 1.0 | 3/3 |
+
+Raw lifecycle data is in `benchmarks/results/27-kumo-provisioning-v1.json`; source-locked publication data is in `benchmarks/publication/27-kumo-provisioning-v2.json`.
+
 ## Adapter boundary
 
 The Kumo adapter configures the AWS provider with local credentials, path-style S3, validation skips, and service endpoints at `127.0.0.1:4566`. The AWS adapter has no emulator endpoint or fake credential. The shared module receives only typed domain inputs.
@@ -77,7 +85,7 @@ Provide credentials through the standard AWS provider chain. Review naming, IAM,
 docker run --rm terraform-aws-baseline validate
 ```
 
-The gate runs Python contract tests, `terraform fmt -check`, provider-locked initialization, validation of both adapters, and publication-evidence validation. GitHub Actions rebuilds the image and reproduces the Kumo benchmark.
+The gate runs Python contract tests, `terraform fmt -check`, provider-locked initialization, and validation of both adapters. Publication provenance is checked from a full Git checkout; GitHub Actions mounts that checkout, rebuilds the image, and reproduces the Kumo benchmark.
 
 ## Scope and honesty
 

@@ -99,8 +99,11 @@ def main() -> int:
             "-no-color",
         ],
         ["terraform", "-chdir=adapters/aws", "validate", "-no-color"],
-        [sys.executable, "tools/validate-publication.py"],
     ]
+    if (ROOT / ".git").exists():
+        commands.append([sys.executable, "tools/validate-publication.py"])
+    else:
+        print("publication provenance deferred: full Git checkout is not mounted")
     failures: list[str] = []
     for command in commands:
         try:

@@ -7,7 +7,7 @@ program:
     - cloud adapter contract
     - Terraform module boundary
     - infrastructure benchmark harness
-status: benchmarked
+status: published
 claim: One shared Terraform module provisions locally through Kumo and can target AWS by changing only the provider adapter.
 stack: [terraform-1.15, aws-provider-5, kumo, python-3.12, docker, github-actions]
 language_profile:
@@ -33,7 +33,7 @@ decision_brain:
   reuse_improvement_loop:
     source: .portfolio/decision-brain/reuse-improvement-loop.yaml
     review_path: sdd/reuse-improvement-review.md
-    current_status: candidate-recorded
+    current_status: promotion-pending
   principles:
     coupling_rule: Provider configuration belongs to adapters; all resource declarations belong to one shared module.
     solid: [srp, ocp, lsp, isp, dip]
