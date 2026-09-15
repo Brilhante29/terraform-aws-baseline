@@ -39,8 +39,8 @@ def text_contract_errors() -> list[str]:
         if not (ROOT / relative).is_file():
             errors.append(f"missing required file: {relative}")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    if not readme.startswith("#27 "):
-        errors.append("README must start with #27")
+    if not readme.startswith("# Terraform AWS Baseline\n"):
+        errors.append("README must start with # Terraform AWS Baseline")
     if "kumo_apply_seconds" not in readme:
         errors.append("README must report kumo_apply_seconds")
     project = (ROOT / "project.yaml").read_text(encoding="utf-8")
