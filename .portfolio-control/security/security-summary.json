@@ -1,20 +1,15 @@
 {
   "disposition": "documented",
-  "fixable": 120,
+  "fixable": 12,
   "fixable_packages": {
-    "go.opentelemetry.io/otel": 2,
-    "golang.org/x/crypto": 29,
-    "golang.org/x/mod": 6,
-    "golang.org/x/net": 11,
-    "golang.org/x/text": 3,
-    "google.golang.org/grpc": 5,
-    "stdlib": 64
+    "google.golang.org/grpc": 2,
+    "stdlib": 10
   },
-  "generated_at": "2026-08-21T15:01:23.429276Z",
-  "high_critical_total": 120,
+  "generated_at": "2026-09-15T19:27:13.759927Z",
+  "high_critical_total": 12,
   "image": "terraform-aws-baseline:sec",
   "no_upstream_fix": 0,
   "rationale": "Base images are pinned by digest so benchmark provenance stays comparable. Rebuilding does not clear these advisories: the current upstream digest carries the same set. Applying apt-get upgrade would make the image non-deterministic and change image_digest between builds of the same commit, breaking the V2 comparability contract.",
   "repository": "terraform-aws-baseline",
-  "sbom_packages": 1071
+  "sbom_packages": 737
 }
