@@ -1,4 +1,4 @@
-#27 terraform-aws-baseline
+# Terraform AWS Baseline
 
 [![validation](https://github.com/Brilhante29/terraform-aws-baseline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Brilhante29/terraform-aws-baseline/actions/workflows/ci.yml)
 
